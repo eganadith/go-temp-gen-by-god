@@ -8,49 +8,50 @@ import (
 	"strings"
 )
 
-func main() {
-	// Get the current working directory
-	currentDir, err := os.Getwd()
+func convertAndCopyGoFiles(srcDir, dstDir string) {
+	// Read the list of files and directories inside the source directory
+	files, err := ioutil.ReadDir(srcDir)
 	if err != nil {
-		fmt.Println("Error getting current directory:", err)
+		fmt.Printf("Error reading directory %s: %v\n", srcDir, err)
 		return
 	}
 
-	// Get a list of all files in the current directory
-	files, err := ioutil.ReadDir(currentDir)
-	if err != nil {
-		fmt.Println("Error reading directory:", err)
+	// Create the destination directory if it doesn't exist
+	if err := os.MkdirAll(dstDir, 0755); err != nil {
+		fmt.Printf("Error creating directory %s: %v\n", dstDir, err)
 		return
 	}
 
-	// Loop through the files and convert .go files to .tmp files
+	// Loop through the files and directories in the source directory
 	for _, file := range files {
-		if !file.IsDir() && strings.HasSuffix(file.Name(), ".go") {
-			goFilePath := filepath.Join(currentDir, file.Name())
-			tmpFilePath := filepath.Join(currentDir, strings.TrimSuffix(file.Name(), ".go")+".tmp")
+		srcFilePath := filepath.Join(srcDir, file.Name())
+		dstFilePath := filepath.Join(dstDir, file.Name())
 
+		if file.IsDir() {
+			// Recursively process subdirectories
+			convertAndCopyGoFiles(srcFilePath, dstFilePath)
+		} else if strings.HasSuffix(file.Name(), ".go") {
 			// Read the content of the .go file
-			content, err := ioutil.ReadFile(goFilePath)
+			content, err := ioutil.ReadFile(srcFilePath)
 			if err != nil {
-				fmt.Printf("Error reading %s: %v\n", goFilePath, err)
+				fmt.Printf("Error reading %s: %v\n", srcFilePath, err)
 				continue
 			}
 
-			// Write the content to the .tmp file
-			err = ioutil.WriteFile(tmpFilePath, content, 0644)
-			if err != nil {
+			// Write the content to the .tmp file in the destination directory
+			tmpFilePath := strings.TrimSuffix(dstFilePath, ".go") + ".tmp"
+			if err := ioutil.WriteFile(tmpFilePath, content, 0644); err != nil {
 				fmt.Printf("Error writing to %s: %v\n", tmpFilePath, err)
 				continue
 			}
-
-			fmt.Printf("Converted %s to %s\n", goFilePath, tmpFilePath)
+			fmt.Printf("Converted %s to %s\n", srcFilePath, tmpFilePath)
 		}
 	}
 }
 
-git init
-git add .
-git commit -m "first commit"
-git branch -M main
-git remote add origin https://github.com/eganadith/go-temp-gen-by-god.git
-git push -u origin main
+func main() {
+	srcBaseDir := "E:/Evolza/Go Temp Convert/Gofiles"
+	dstBaseDir := "E:/Evolza/Go Temp Convert/NewTemp" // Change this to the destination path where you want to create the new folder structure with .tmp files
+
+	convertAndCopyGoFiles(srcBaseDir, dstBaseDir)
+}
